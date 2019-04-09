@@ -1,5 +1,6 @@
 from osgeo import gdal
 import numpy as np
+import batch_feeder as bf
 
 ## input file list
 file_list = ["_bejing_reduced_projected_labels.tif",
@@ -70,3 +71,15 @@ for index, file in enumerate(file_list):
 
     rasters_geo.append(raster_geo)
     rasters_np.append(raster_np)
+
+
+## define project defaults TODO: move to seperete file and get from the file, preferably json.
+SUB_IMAGE_COLS = 120
+SUB_IMAGE_ROWS = 120
+
+IMAGE_COLS = rasters_np[0].shape[0]
+IMAGE_ROWS = rasters_np[0].shape[1]
+
+batch_feeder = bf.batch_feeder(IMAGE_COLS, IMAGE_ROWS, SUB_IMAGE_COLS, SUB_IMAGE_ROWS, True)
+
+print(batch_feeder.get_next_interval())
