@@ -61,3 +61,6 @@ class batch_feeder:
                 return_rows = example[1] * self.row_size
 
                 return return_cols, return_rows, return_cols + self.col_size, return_rows + self.row_size
+
+    def get_total_train_data(self):
+        return len(self.ordered_example_pool)
