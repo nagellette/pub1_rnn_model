@@ -80,6 +80,12 @@ SUB_IMAGE_ROWS = 120
 IMAGE_COLS = rasters_np[0].shape[0]
 IMAGE_ROWS = rasters_np[0].shape[1]
 
-batch_feeder = bf.batch_feeder(IMAGE_COLS, IMAGE_ROWS, SUB_IMAGE_COLS, SUB_IMAGE_ROWS, True)
+batch_feeder = bf.batch_feeder(IMAGE_COLS, IMAGE_ROWS, SUB_IMAGE_COLS, SUB_IMAGE_ROWS, False)
 
-print(batch_feeder.get_next_interval())
+
+while True:
+    feed = batch_feeder.get_next_interval()
+    if feed is not None:
+        print(feed)
+    else:
+        break
