@@ -148,7 +148,7 @@ def generate_input_arrays(batch_s):
                     y = temp_all_array[feed[0]:feed[3]][feed[1]:feed[2]]
                 else:
                     temp_all_array = rasters_np[j]
-                    temp = temp_all_array[feed[0]:feed[3]][feed[1]:feed[2]]
+                    temp = temp_all_array[feed[0]:feed[3], feed[1]:feed[2]]
                     print(temp.shape)
                     np.concatenate((x, temp.flatten()))
 
