@@ -131,35 +131,41 @@ class AccuracyHistory(keras.callbacks.Callback):
 
 
 history = AccuracyHistory()
+print(model.summary())
 
 ## creating feeder object
 batch_feeder = bf.batch_feeder(IMAGE_COLS, IMAGE_ROWS, SUB_IMAGE_COLS, SUB_IMAGE_ROWS, shuffle)
 
+
 def generate_input_arrays(batch_s):
-    for i in range(0, batch_s):
-        feed = batch_feeder.get_next_interval()
+    while True:
+        for i in range(0, batch_s):
+            feed = batch_feeder.get_next_interval()
 
-        if feed is not None:
-            for j in range(0, train_bands + 1):
-                if j ==0:
-                    x = rasters_np[j].flatten()
-                elif j == train_bands:
-                    temp_all_array = rasters_np[j]
-                    y = temp_all_array[feed[0]:feed[3]][feed[1]:feed[2]]
-                else:
-                    temp_all_array = rasters_np[j]
-                    temp = temp_all_array[feed[0]:feed[3], feed[1]:feed[2]]
-                    print(temp.shape)
-                    np.concatenate((x, temp.flatten()))
+            if feed is not None:
+                for j in range(0, train_bands + 1):
+                    if j == 0:
+                        temp_all_array = rasters_np[j]
+                        temp = temp_all_array[feed[0]:feed[2], feed[1]:feed[3]]
+                        x = temp.flatten()
+                    elif j == train_bands:
+                        temp_all_array = rasters_np[j]
+                        y = temp_all_array[feed[0]:feed[2], feed[1]:feed[3]].flatten()
+                        print(y.shape)
+                    else:
+                        temp_all_array = rasters_np[j]
+                        temp = temp_all_array[feed[0]:feed[2], feed[1]:feed[3]]
+                        x = np.concatenate((x, temp.flatten()))
 
-            yield x.reshape(x.shape[0], SUB_IMAGE_COLS, SUB_IMAGE_ROWS, train_bands), y
+                yield x.reshape(1, SUB_IMAGE_COLS, SUB_IMAGE_ROWS, train_bands), y.reshape(1,
+                                                                                              SUB_IMAGE_ROWS * SUB_IMAGE_COLS)
+
 
 model.fit_generator(generate_input_arrays(batch_size),
                     steps_per_epoch=batch_feeder.get_total_train_data(),
                     epochs=training_epochs,
                     verbose=1,
-                    callbacks=[history])  # ,
-# validation_data=(x_test, y_test))
+                    callbacks=[history])
 
 plt.plot(range(1, training_epochs), history.acc)
 plt.xlabel('Epochs')

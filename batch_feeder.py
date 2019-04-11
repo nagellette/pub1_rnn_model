@@ -30,7 +30,7 @@ class batch_feeder:
     def get_next_interval(self):
         if self.shuffle:
             if len(self.ordered_example_pool) > 0:
-                print(len(self.ordered_example_pool))
+                # print(len(self.ordered_example_pool))
                 # get random value in the range
                 rand_idx = random.randint(0, len(self.ordered_example_pool) - 1)
 
