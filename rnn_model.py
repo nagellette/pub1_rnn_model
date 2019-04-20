@@ -5,6 +5,7 @@ import keras
 from keras.layers import Dense, Flatten
 from keras.layers import Conv2D, MaxPooling2D, ZeroPadding2D
 from keras.models import Sequential
+import support_functions as sf
 
 ## input file list
 file_list = ["SAR_5m_amplitude_vv.tif",
@@ -81,8 +82,8 @@ define project defaults TODO: move to seperete file and get from the file, prefe
 '''
 
 ## sub image size
-SUB_IMAGE_COLS = 80
-SUB_IMAGE_ROWS = 80
+SUB_IMAGE_COLS = 40
+SUB_IMAGE_ROWS = 40
 
 ## shape of original images
 IMAGE_COLS = rasters_np[0].shape[0]
@@ -92,7 +93,7 @@ shuffle = True
 skip_last_batch = True
 batch_size = 64
 train_bands = len(file_list) - 1
-training_epochs = 10
+training_epochs = 5
 learning_rate = 0.001
 n_classes = SUB_IMAGE_ROWS * SUB_IMAGE_COLS
 
@@ -134,35 +135,47 @@ history = AccuracyHistory()
 print(model.summary())
 
 ## creating feeder object
-batch_feeder = bf.batch_feeder(IMAGE_COLS, IMAGE_ROWS, SUB_IMAGE_COLS, SUB_IMAGE_ROWS, shuffle)
+batch_feeder = bf.batch_feeder(IMAGE_COLS, IMAGE_ROWS, SUB_IMAGE_COLS, SUB_IMAGE_ROWS)
 
 
-def generate_input_arrays(batch_s):
+def generate_input_arrays(b_size):
     while True:
-        for i in range(0, batch_s):
+        for i in range(0, b_size):
             feed = batch_feeder.get_next_interval()
 
-            if feed is not None:
-                for j in range(0, train_bands + 1):
-                    if j == 0:
-                        temp_all_array = rasters_np[j]
-                        temp = temp_all_array[feed[0]:feed[2], feed[1]:feed[3]]
-                        x = temp.flatten()
-                    elif j == train_bands:
-                        temp_all_array = rasters_np[j]
-                        y = temp_all_array[feed[0]:feed[2], feed[1]:feed[3]].flatten()
-                        print(y.shape)
-                    else:
-                        temp_all_array = rasters_np[j]
-                        temp = temp_all_array[feed[0]:feed[2], feed[1]:feed[3]]
-                        x = np.concatenate((x, temp.flatten()))
+            for j in range(0, train_bands + 1):
+                if j == 0:
+                    temp_all_array = rasters_np[j]
+                    temp = temp_all_array[feed[0]:feed[2], feed[1]:feed[3]]
+                    xx = temp.flatten()
+                elif j == train_bands:
+                    temp_all_array = rasters_np[j]
+                    yy = temp_all_array[feed[0]:feed[2], feed[1]:feed[3]].flatten()
+                else:
+                    temp_all_array = rasters_np[j]
+                    temp = temp_all_array[feed[0]:feed[2], feed[1]:feed[3]]
+                    xx = np.concatenate((xx, temp.flatten()))
 
-                yield x.reshape(1, SUB_IMAGE_COLS, SUB_IMAGE_ROWS, train_bands), y.reshape(1,
-                                                                                              SUB_IMAGE_ROWS * SUB_IMAGE_COLS)
+            # create the initial batch or merge the batch with new value
+            if i == 0:
+                x = xx
+                y = yy
+            else:
+                x = np.concatenate((x, xx))
+                y = np.concatenate((y, yy))
+
+        # reshape the data and labels to batch count of rows as flattened images.
+        x = np.reshape(x, (-1, SUB_IMAGE_ROWS * SUB_IMAGE_COLS * train_bands))
+        y = np.reshape(y, (-1, SUB_IMAGE_ROWS * SUB_IMAGE_COLS))
+
+        # convert the images to batches of layers
+        yield x.reshape(x.shape[0], SUB_IMAGE_COLS, SUB_IMAGE_ROWS, train_bands), \
+              y.reshape(y.shape[0], SUB_IMAGE_ROWS * SUB_IMAGE_COLS)
 
 
 model.fit_generator(generate_input_arrays(batch_size),
-                    steps_per_epoch=batch_feeder.get_total_train_data(),
+                    steps_per_epoch=sf.math_support_functions.round_to_floor(batch_feeder.get_total_train_data(),
+                                                                             batch_size),
                     epochs=training_epochs,
                     verbose=1,
                     callbacks=[history])
