@@ -6,6 +6,8 @@ from keras.layers import Dense, Flatten
 from keras.layers import Conv2D, MaxPooling2D, ZeroPadding2D
 from keras.models import Sequential
 import support_functions as sf
+from matplotlib import pyplot as plt
+from sklearn import preprocessing
 
 ## input file list
 file_list = ["SAR_5m_amplitude_vv.tif",
@@ -19,16 +21,13 @@ file_list = ["SAR_5m_amplitude_vv.tif",
              "sentinel_B08_5m.tif",
              "sentinel_WVP_5m.tif",
              "probe_aggregated_trajectory_count.tif",
-             "probe_aggregated_speed_avg.tif",
-             "probe_aggregated_speed_stddev.tif",
-             "probe_aggregated_speed_variance.tif",
-             "_bejing_reduced_projected_labels.tif"]
+             "_bejing_full_projected_labels.tif"]
 
 ## raster values definition list
-file_list_types = ["reflectance",
-                   "reflectance",
-                   "reflectance",
-                   "reflectance",
+file_list_types = ["sar",
+                   "sar",
+                   "sar",
+                   "sar",
                    "reflectance",
                    "reflectance",
                    "reflectance",
@@ -73,17 +72,21 @@ rasters_geo = []
 for index, file in enumerate(file_list):
     raster_np, raster_geo = read_raster("./data/" + file)
     print("Reading file: " + file)
+    print("Mean: {0:2.2f}, Median {1:2.2f}, Std: {2:2.2f}, Min: {3:2.2f}, Max: {4:2.2f}".format(
+        np.mean(raster_np), np.median(raster_np), np.std(raster_np), np.min(raster_np), np.max(raster_np)))
+    if index != len(file_list) - 1:
+        print(file)
+        raster_np = (raster_np - np.mean(raster_np)) / np.std(raster_np)
 
     rasters_geo.append(raster_geo)
     rasters_np.append(raster_np)
 
-'''
-define project defaults TODO: move to seperete file and get from the file, preferably json.
-'''
+
+## define project defaults TODO: move to seperate file and get from the file, preferably jso
 
 ## sub image size
-SUB_IMAGE_COLS = 40
-SUB_IMAGE_ROWS = 40
+SUB_IMAGE_COLS = 20
+SUB_IMAGE_ROWS = 20
 
 ## shape of original images
 IMAGE_COLS = rasters_np[0].shape[0]
@@ -93,27 +96,26 @@ shuffle = True
 skip_last_batch = True
 batch_size = 64
 train_bands = len(file_list) - 1
-training_epochs = 5
+training_epochs = 20
 learning_rate = 0.001
 n_classes = SUB_IMAGE_ROWS * SUB_IMAGE_COLS
 
 ## model definition
 ## TODO: Autoencoder/Decoder shape created by array sizes, should be re-visited according to original definition if that differes
 model = Sequential()
-model.add(Conv2D(32, kernel_size=(4, 4), strides=(1, 1),
+model.add(Conv2D(32, kernel_size=(3, 3), strides=(1, 1),
                  activation='relu',
                  input_shape=(SUB_IMAGE_COLS, SUB_IMAGE_ROWS, train_bands)))
-model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-model.add(Conv2D(64, (4, 4), strides=(1, 1),
+model.add(Conv2D(64, (3, 3), strides=(1, 1),
                  activation='relu'))
-model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
-model.add(Conv2D(128, (4, 4), strides=(1, 1),
+model.add(Conv2D(128, (3, 3), strides=(1, 1),
                  activation='relu'))
-model.add(MaxPooling2D(pool_size=(2, 2), strides=(2, 2)))
 model.add(Flatten())
-model.add(Dense(1600, activation='relu'))
-model.add(Dense(1600, activation='relu'))
 model.add(Dense(3200, activation='relu'))
+model.add(Dense(3200, activation='relu'))
+model.add(Dense(3200, activation='relu'))
+model.add(Dense(1600, activation='relu'))
+model.add(Dense(1600, activation='relu'))
 model.add(Dense(n_classes, activation='relu'))
 
 ## loss function chosen as MSE to obtain values between 0-1
@@ -159,7 +161,7 @@ def generate_input_arrays(b_size):
             # create the initial batch or merge the batch with new value
             if i == 0:
                 x = xx
-                y = yy
+                y = yy / 255.0
             else:
                 x = np.concatenate((x, xx))
                 y = np.concatenate((y, yy))
@@ -180,7 +182,7 @@ model.fit_generator(generate_input_arrays(batch_size),
                     verbose=1,
                     callbacks=[history])
 
-plt.plot(range(1, training_epochs), history.acc)
+plt.plot(range(1, training_epochs + 1), history.acc)
 plt.xlabel('Epochs')
 plt.ylabel('Accuracy')
 plt.show()
