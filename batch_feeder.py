@@ -23,7 +23,11 @@ class batch_feeder:
         # creating ordered list to process the examples randomly
         self.ordered_example_pool = list(range(0, len(self.example_pool)))
 
+        # random seed
+        random.seed(6)
+
     def get_next_interval(self):
+
         # get random value in the range
         rand_idx = random.randint(0, len(self.ordered_example_pool) - 1)
 
