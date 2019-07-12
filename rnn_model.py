@@ -90,7 +90,7 @@ for index, file in enumerate(file_list):
     rasters_geo.append(raster_geo)
     rasters_np.append(raster_np)
 
-## define project defaults TODO: move to seperate file and get from the file, preferably jso
+## define project defaults TODO: move to seperate file and get from the file, preferably json
 
 ## sub image size
 SUB_IMAGE_COLS = 224
